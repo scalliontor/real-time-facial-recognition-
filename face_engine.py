@@ -75,7 +75,7 @@ def init_face_app():
 
 def detect_faces(app, frame):
     """
-    Detect and analyze faces in a frame.
+    Detect and analyze everything (detection + recognition) for all faces.
 
     Args:
         app: Initialized FaceAnalysis object.
@@ -86,6 +86,40 @@ def detect_faces(app, frame):
     """
     faces = app.get(frame)
     return faces
+
+
+def detect_only(app, frame):
+    """
+    Detects faces WITHOUT running the heavy recognition model.
+    Use this for high-FPS tracking.
+    """
+    bboxes, kpss = app.det_model.detect(frame, max_num=0, metric='default')
+    if bboxes.shape[0] == 0:
+        return []
+        
+    faces = []
+    from insightface.app.common import Face
+    for i in range(bboxes.shape[0]):
+        bbox = bboxes[i, 0:4]
+        det_score = bboxes[i, 4]
+        kps = None
+        if kpss is not None:
+            kps = kpss[i]
+        face = Face(bbox=bbox, kps=kps, det_score=det_score)
+        faces.append(face)
+    return faces
+
+
+def extract_features(app, frame, face) -> np.ndarray:
+    """
+    Runs the recognition model on a specifically detected face to extract its 512-D embedding.
+    Modifies the face object in-place and returns the embedding.
+    """
+    for taskname, model in app.models.items():
+        if taskname == 'detection':
+            continue
+        model.get(frame, face)
+    return face.normed_embedding.astype(np.float32)
 
 
 def get_embedding(face) -> np.ndarray:
