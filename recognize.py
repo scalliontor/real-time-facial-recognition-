@@ -196,6 +196,8 @@ def start_unified(app, cap, threshold: float = MATCH_THRESHOLD):
                     # KNOWN PERSON! Cache the identity — no more retries.
                     tracker.identity = user_id
                     tracker.score = score
+                    # Clear any partial auto-registration data
+                    tracker.embeddings = []
 
             # Drawing Phase based on Tracker State
             if tracker.identity is not None:
