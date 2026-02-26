@@ -29,10 +29,9 @@ STEADY_DURATION = 1.0       # Seconds the face must be steady before capture sta
 FRAMES_NEEDED = 5           # Number of embeddings to average for registration
 CAPTURE_INTERVAL = 0.3      # Seconds between captures once steady
 MATCH_THRESHOLD = 0.5       # Cosine similarity threshold for recognition
-RECOG_INTERVAL = 0.5        # Seconds between recognition retries for unknown tracks
+RECOG_FRAME_INTERVAL = 10   # Retry recognition every N frames for unknown tracks
 TRACK_MAX_DIST = 100        # Max pixel distance to link the same face between frames
 TRACK_MAX_AGE = 1.5         # Seconds to keep a lost track alive before deleting
-CAMERA_FPS = 5
 
 class FastFaceTracker:
     """Tracks a single face across frames using center distance."""
@@ -49,7 +48,7 @@ class FastFaceTracker:
         # Recognition Phase (retries periodically until identified)
         self.identity = None   # Becomes user_id if known
         self.score = 0.0       # Similarity score if known
-        self.last_recog_time = 0  # Force immediate first attempt
+        self.frames_since_recog = RECOG_FRAME_INTERVAL  # Force immediate first attempt
         
         # Registration Phase (For unknowns only)
         self.steady_start = now
@@ -61,7 +60,7 @@ class FastFaceTracker:
         """Check if this track should run AuraFace recognition again."""
         if self.identity is not None:
             return False  # Already identified, skip forever
-        return (time.time() - self.last_recog_time) >= RECOG_INTERVAL
+        return self.frames_since_recog >= RECOG_FRAME_INTERVAL
 
     def update_position(self, center, bbox):
         """Update tracker with new frame coordinates and check steadiness."""
@@ -186,11 +185,12 @@ def start_unified(app, cap, threshold: float = MATCH_THRESHOLD):
             # Update position (only for frames where we really saw them)
             tracker.update_position(det_centers[d_idx], bbox)
 
-            # Identification Phase (retry periodically until recognized)
+            # Identification Phase (retry every N frames until recognized)
+            tracker.frames_since_recog += 1
             if tracker.needs_recognition():
                 embedding = extract_features(app, frame, face)
                 user_id, score = find_best_match(embedding, db_embeddings, threshold)
-                tracker.last_recog_time = time.time()
+                tracker.frames_since_recog = 0
                 
                 if user_id is not None:
                     # KNOWN PERSON! Cache the identity — no more retries.
