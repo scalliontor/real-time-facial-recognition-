@@ -29,7 +29,7 @@ STEADY_DURATION = 1.0       # Seconds the face must be steady before capture sta
 FRAMES_NEEDED = 5           # Number of embeddings to average for registration
 CAPTURE_INTERVAL = 0.3      # Seconds between captures once steady
 MATCH_THRESHOLD = 0.5       # Cosine similarity threshold for recognition
-RECOG_FRAME_INTERVAL = 10   # Retry recognition every N frames for unknown tracks
+RECOG_FRAME_INTERVAL = 5    # Retry recognition every N frames for unknown tracks
 TRACK_MAX_DIST = 100        # Max pixel distance to link the same face between frames
 TRACK_MAX_AGE = 1.5         # Seconds to keep a lost track alive before deleting
 
