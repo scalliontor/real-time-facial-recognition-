@@ -29,9 +29,10 @@ STEADY_DURATION = 1.0       # Seconds the face must be steady before capture sta
 FRAMES_NEEDED = 5           # Number of embeddings to average for registration
 CAPTURE_INTERVAL = 0.3      # Seconds between captures once steady
 MATCH_THRESHOLD = 0.5       # Cosine similarity threshold for recognition
+RECOG_INTERVAL = 0.5        # Seconds between recognition retries for unknown tracks
 TRACK_MAX_DIST = 100        # Max pixel distance to link the same face between frames
 TRACK_MAX_AGE = 1.5         # Seconds to keep a lost track alive before deleting
-
+CAMERA_FPS = 5
 
 class FastFaceTracker:
     """Tracks a single face across frames using center distance."""
@@ -45,16 +46,22 @@ class FastFaceTracker:
         now = time.time()
         self.last_seen = now
         
-        # Recognition Phase (AuraFace runs ONCE to set identity)
-        self.identified_once = False
+        # Recognition Phase (retries periodically until identified)
         self.identity = None   # Becomes user_id if known
         self.score = 0.0       # Similarity score if known
+        self.last_recog_time = 0  # Force immediate first attempt
         
         # Registration Phase (For unknowns only)
         self.steady_start = now
         self.is_steady = False
         self.embeddings = []
         self.last_capture_time = 0
+
+    def needs_recognition(self):
+        """Check if this track should run AuraFace recognition again."""
+        if self.identity is not None:
+            return False  # Already identified, skip forever
+        return (time.time() - self.last_recog_time) >= RECOG_INTERVAL
 
     def update_position(self, center, bbox):
         """Update tracker with new frame coordinates and check steadiness."""
@@ -125,7 +132,7 @@ def start_unified(app, cap, threshold: float = MATCH_THRESHOLD):
     COLOR_BG = (0, 0, 0)
 
     prev_time = time.time()
-    fps = 0.0
+    fps = 5
     registered_count = 0
 
     trackers = []
@@ -144,7 +151,6 @@ def start_unified(app, cap, threshold: float = MATCH_THRESHOLD):
             continue
 
         now = time.time()
-        fps = 1.0 / (now - prev_time) if (now - prev_time) > 0 else 0
         prev_time = now
         display = frame.copy()
 
@@ -180,14 +186,14 @@ def start_unified(app, cap, threshold: float = MATCH_THRESHOLD):
             # Update position (only for frames where we really saw them)
             tracker.update_position(det_centers[d_idx], bbox)
 
-            # Identification Phase (Run AuraFace ONLY ONCE for a new track)
-            if not tracker.identified_once:
+            # Identification Phase (retry periodically until recognized)
+            if tracker.needs_recognition():
                 embedding = extract_features(app, frame, face)
                 user_id, score = find_best_match(embedding, db_embeddings, threshold)
-                tracker.identified_once = True
+                tracker.last_recog_time = time.time()
                 
                 if user_id is not None:
-                    # KNOWN PERSON! Cache the identity.
+                    # KNOWN PERSON! Cache the identity — no more retries.
                     tracker.identity = user_id
                     tracker.score = score
 
