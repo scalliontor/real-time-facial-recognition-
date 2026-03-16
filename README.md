@@ -8,17 +8,7 @@
 
 ### 📸 Demo
 
-![Unknown Face Detection](data/demo_unknown.jpg)
-*Khung màu đỏ khi phát hiện người lạ chưa đủ gần/chưa đứng yên*
-
-![Auto Registration](data/demo_registering.jpg)
-*Khung màu cam khi hệ thống đang tự động trích xuất 5 frame liên tiếp để tạo hồ sơ*
-
-![Registered Successfully](data/demo_registered.jpg)
-*Thông báo xanh lá sau khi hồ sơ được tạo tự động thành công*
-
-![Recognized Users](data/demo_recognized.jpg)
-*Khung xanh lá nhận diện thời gian thực ID người xem sau khi đã có dữ liệu*
+*(Tính năng nhận diện sẽ hiển thị trực tiếp trên luồng camera, sử dụng các khung màu để phân biệt: đỏ (chưa đủ gần), cam (đang đăng ký), xanh lá (đã nhận diện))*
 
 ---
 
@@ -224,3 +214,15 @@ data/
 ```
 
 > Ảnh crop được lưu riêng để có thể **re-extract embedding** nếu sau này nâng cấp model — không cần đăng ký lại từ đầu.
+
+---
+
+## Phần 4 — Nguồn Tham Khảo & Tác Giả
+
+Hệ thống được phát triển dựa trên các framework và thuật toán mã nguồn mở hàng đầu:
+
+- **InsightFace (RetinaFace)**: Dùng cho mô-đun phát hiện khuôn mặt cực nhanh (Face Detection). [GitHub](https://github.com/deepinsight/insightface)
+- **AuraFace-v1 (fal-ai)**: Mô hình trích xuất đặc trưng khuôn mặt (Face Recognition) tạo ra embedding 512 chiều có độ chính xác cao. [HuggingFace](https://huggingface.co/fal/AuraFace-v1)
+- **SciPy (linear_sum_assignment)**: Trái tim của thuật toán theo dõi khối Hungarian (SORT Tracker) cho việc tracking nhiều ID ở mức FPS tối đa băng việc bỏ qua suy luận CNN. [SciPy](https://scipy.org/)
+- **ONNX Runtime (GPU)**: Inference engine cốt lõi cho việc tăng tốc phần cứng bằng NVIDIA CUDA & cuDNN. [ONNX](https://onnxruntime.ai/)
+- **OpenCV**: Xử lý đồ họa thời gian thực, webcam input và Giao diện người dùng. [OpenCV](https://opencv.org/)
